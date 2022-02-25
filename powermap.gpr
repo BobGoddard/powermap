@@ -1,0 +1,25 @@
+with "/opt/ada/2021/share/gpr/unix_utils.gpr";
+with "/opt/GNAT/2021/share/gpr/xmlada_dom.gpr";
+with "/opt/GNAT/2021/share/gpr/xmlada.gpr";
+with "/opt/ada/2021/share/gpr/adabase.gpr";
+
+project Powermap is
+
+   for Object_Dir use "obj";
+   for Main use ("powermap.adb");
+
+   package Linker is
+      for Default_Switches ("ada") use ("-lmariadb", "-lsqlite3");
+   end Linker;
+
+   package Compiler is
+   end Compiler;
+
+   package Binder is
+   end Binder;
+
+   for Languages use ("Ada");
+   for Source_Dirs use ("/home/src/build/Ada/powermap/src");
+
+end Powermap;
+
