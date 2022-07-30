@@ -1,7 +1,7 @@
-with "/opt/ada/2021/share/gpr/unix_utils.gpr";
-with "/opt/GNAT/2021/share/gpr/xmlada_dom.gpr";
-with "/opt/GNAT/2021/share/gpr/xmlada.gpr";
-with "/opt/ada/2021/share/gpr/adabase.gpr";
+with "unix_utils.gpr";
+with "xmlada_dom.gpr";
+with "xmlada.gpr";
+with "adabase.gpr";
 
 project Powermap is
 
@@ -19,7 +19,6 @@ project Powermap is
    end Binder;
 
    for Languages use ("Ada");
-   for Source_Dirs use ("/home/src/build/Ada/powermap/src");
+   for Source_Dirs use ("src");
 
 end Powermap;
-
