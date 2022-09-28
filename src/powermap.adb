@@ -20,15 +20,16 @@ with Ada.Strings.Unbounded;    use Ada.Strings.Unbounded;
 with Ada.Strings.Unbounded.Text_IO;
 with GNAT.Calendar;
 with GNAT.Command_Line;
+with GNAT.OS_Lib;
 with Interfaces.C;
 with db_routines;              use db_routines;
 with Time_Routines;            use Time_Routines;
 with Record_Types;             use Record_Types;
-with Print_Line;               use Print_Line;
 with Update_Record;            use Update_Record;
 with Construct_SVG;            use Construct_SVG;
 with Generate_HTML;
 with Config_Handler;
+with Logger;
 
 function Powermap return Integer is
    index            : Integer;
@@ -57,11 +58,26 @@ function Powermap return Integer is
    tmp_bool         : Boolean := False;
    tmp_ts           : Ada.Calendar.Time := GNAT.Calendar.No_Time;
    XML_Settings     : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.To_Unbounded_String ("/etc/powermap.xml");
+   Config           : GNAT.Command_Line.Command_Line_Configuration;
    CMD_Args         : exception;
    pragma Warnings (Off, tmp_bool);
 begin
+   GNAT.Command_Line.Define_Switch (Config, "-d",  Help => "Update day graph");
+   GNAT.Command_Line.Define_Switch (Config, "-h",  Help => "Help command");
+   GNAT.Command_Line.Define_Switch (Config, "-i",  Help => "XML config file (/etc/powermap.xml)");
+   GNAT.Command_Line.Define_Switch (Config, "-m",  Help => "Update month graph");
+   GNAT.Command_Line.Define_Switch (Config, "-o",  Help => "Update month offset graph");
+   GNAT.Command_Line.Define_Switch (Config, "-t",  Help => "Start from <seconds>");
+   GNAT.Command_Line.Define_Switch (Config, "-w",  Help => "Update week graph");
+   GNAT.Command_Line.Define_Switch (Config, "-y",  Help => "Update year graph");
+
    loop
-      case GNAT.Command_Line.Getopt ("y m o w d t: i:") is
+      case GNAT.Command_Line.Getopt ("h y m o w d t: i:") is
+         when ASCII.NUL =>
+            exit;
+         when 'h' =>
+            GNAT.Command_Line.Display_Help (Config);
+            GNAT.OS_Lib.OS_Exit (0);
          when 'y' =>
             is_year := True;
          when 'm' =>
@@ -77,9 +93,11 @@ begin
          when 'i' =>
             XML_Settings := Ada.Strings.Unbounded.To_Unbounded_String (GNAT.Command_Line.Parameter);
          when others =>
-            exit;
+            raise Program_Error; -- cannot occur
       end case;
    end loop;
+
+   GNAT.Command_Line.Free (Config);
 
    if not Ada.Directories.Exists (Ada.Strings.Unbounded.To_String (XML_Settings)) then
       raise CMD_Args with "Problem reading " & Ada.Strings.Unbounded.To_String (XML_Settings);
@@ -91,11 +109,10 @@ begin
 
    Config_Handler.Set_Config_Name (XML_Settings);
    Config_Handler.Load_Config;
-   ctime.tm := Ada.Calendar.Clock;
-   populate_subs (ctime);
    db_connect;
+   ctime.tm  := Ada.Calendar.Conversions.To_Ada_Time (db_routines.Get_Last_TS);
+   ts_start.tm := Ada.Calendar.Conversions.To_Ada_Time (db_routines.Get_Last_TS_Run);
    earliest_start.tm := Ada.Calendar.Conversions.To_Ada_Time (db_routines.get_earliest_start);
-   ts_start := ctime;
 
    if tmp_ts /= GNAT.Calendar.No_Time then
       if tmp_ts > ctime.tm then
@@ -105,7 +122,6 @@ begin
          ts_start := earliest_start;
       end if;
    end if;
---   return -1;
 
    if not is_year and not is_month and not is_offset and not is_week and not is_day then
       is_year   := True;
@@ -145,7 +161,6 @@ begin
 
             year_monthly :
             loop
-               Print_Line_Year (stime_start, stime_end, stime_start_off, stime_end_off);
                period_details.periodstart := stime_start;
                period_details.periodend   := stime_end;
                power_details (index) := get_power_usage (period_details, Record_Types.year, ctime);
@@ -183,8 +198,6 @@ begin
             end if;
             gtime_start := gtime_end;
             gtime_end   := Time_Routines.add (gtime_end, Time_Routines.to_inc_years (1));
-            Print_Power_Array (power_details);
-            Print_Power_Array (power_details_off);
          end loop year_yearly;
       end;
    end if;
@@ -206,7 +219,6 @@ begin
 
             month_daily :
             loop
-               Print_Line_Month (stime_start, stime_end);
                period_details.periodstart := stime_start;
                period_details.periodend   := stime_end;
                power_details (index)       := get_power_usage (period_details, Record_Types.month, ctime);
@@ -227,7 +239,6 @@ begin
             Write_SVG (power_details, Record_Types.month);
             gtime_start := gtime_end;
             gtime_end   := Time_Routines.add (gtime_end, Time_Routines.to_inc_months (1));
-            Print_Power_Array (power_details);
          end;
       end loop month_monthly;
    end if;
@@ -250,7 +261,6 @@ begin
          begin
             offset_daily :
             loop
-               Print_Line_Month (stime_start, stime_end);
                period_details.periodstart := stime_start;
                period_details.periodend   := stime_end;
                power_details (index)       := get_power_usage (period_details, Record_Types.offset, ctime);
@@ -272,7 +282,6 @@ begin
             gtime_start := gtime_end;
             gtime_end   := Time_Routines.add (gtime_end, Time_Routines.to_inc_months (1));
             bill_date (gtime_end);
-            Print_Power_Array (power_details);
          end;
       end loop offset_monthly;
    end if;
@@ -287,7 +296,6 @@ begin
          stime_start := gtime_start;
          stime_end   := Time_Routines.add (stime_start, Time_Routines.to_inc_days (1));
          index := 1;
-         Print_Line_Month (gtime_start, gtime_end);
 
          declare
             power_details : pow_array (1 .. 7);
@@ -295,7 +303,6 @@ begin
 
             day_daily :
             loop
-               Print_Line_Month (stime_start, stime_end);
                period_details.periodstart := stime_start;
                period_details.periodend   := stime_end;
                power_details (index)       := get_power_usage (period_details, Record_Types.week, ctime);
@@ -317,7 +324,6 @@ begin
             Write_SVG (power_details, Record_Types.week);
             gtime_start := gtime_end;
             gtime_end   := Time_Routines.add (gtime_end, Time_Routines.to_inc_days (7));
-            Print_Power_Array (power_details);
          end;
       end loop daily;
    end if;
@@ -340,7 +346,6 @@ begin
 
             minutely :
             loop
-               Print_Line_Month (stime_start, stime_end);
                period_details.periodstart := stime_start;
                period_details.periodend   := stime_end;
                power_details (index)       := get_power_usage (period_details, Record_Types.day, ctime);
@@ -362,7 +367,6 @@ begin
             Write_SVG (power_details, Record_Types.day);
             gtime_start := gtime_end;
             gtime_end   := Time_Routines.add (gtime_end, Time_Routines.to_inc_days (1));
-            Print_Power_Array (power_details);
          end;
       end loop m_daily;
    end if;

@@ -13,14 +13,15 @@
 --  You should have received a copy of the GNU General Public License
 --  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-with Record_Types;
+with Ada.Exceptions;
+with Ada.Strings.Unbounded;
 
-package Print_Line is
-
-   procedure Print_Line_Day    (t1 : Record_Types.tmrec);
-   procedure Print_Line_Month  (t1 : Record_Types.tmrec; t2 : Record_Types.tmrec);
-   procedure Print_Line_Year   (t1 : Record_Types.tmrec; t2 : Record_Types.tmrec; t3 : Record_Types.tmrec; t4 : Record_Types.tmrec);
-   procedure Print_Power_Array (t1 : Record_Types.pow_array);
-   procedure Print_Single_Line (s  : String);
-
-end Print_Line;
+package Logger is
+   procedure Initialise;
+   protected Secure is
+      procedure Logger (S : String);
+      procedure Logger (S : Ada.Strings.Unbounded.Unbounded_String);
+      procedure Logger (S : String;                                 E : Ada.Exceptions.Exception_Occurrence);
+      procedure Logger (S : Ada.Strings.Unbounded.Unbounded_String; E : Ada.Exceptions.Exception_Occurrence);
+   end Secure;
+end Logger;

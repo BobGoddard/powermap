@@ -23,7 +23,6 @@ with Ada.Strings.Maps;        use Ada.Strings.Maps;
 with Ada.Streams.Stream_IO;
 with Ada.Characters.Handling;
 with Xstrings;                use Xstrings;
-with Ada.Text_IO;             use Ada.Text_IO;
 with Ada.Float_Text_IO;
 with Ada.Integer_Text_IO;
 with GNAT.Calendar;           use GNAT.Calendar;
@@ -32,7 +31,6 @@ with Interfaces;              use Interfaces;
 with Interfaces.C;
 with Interfaces.C.Strings;    use Interfaces.C.Strings;
 with Unix_Utils;
-with Print_Line;
 with System; use System;
 
 package body Construct_SVG is
@@ -272,18 +270,6 @@ package body Construct_SVG is
       DOM.Core.Elements.Set_Attribute (My_Graph_Node, "ry", "5");
       My_Graph_Node  := DOM.Core.Nodes.Append_Child (My_Root_Node, My_Graph_Node);
 
---      My_Graph_Node  := DOM.Core.Documents.Create_Element (My_Document, "rect");
---      DOM.Core.Elements.Set_Attribute (My_Graph_Node, "class", "tooltip_bg");
---      DOM.Core.Elements.Set_Attribute (My_Graph_Node, "id", "tooltip_bg1");
---      DOM.Core.Elements.Set_Attribute (My_Graph_Node, "visibility", "hidden");
---      DOM.Core.Elements.Set_Attribute (My_Graph_Node, "x", "510");
---      DOM.Core.Elements.Set_Attribute (My_Graph_Node, "y", "300");
---      DOM.Core.Elements.Set_Attribute (My_Graph_Node, "width", "90");
---      DOM.Core.Elements.Set_Attribute (My_Graph_Node, "height", "50");
---      DOM.Core.Elements.Set_Attribute (My_Graph_Node, "rx", "5");
---      DOM.Core.Elements.Set_Attribute (My_Graph_Node, "ry", "5");
---      My_Graph_Node  := DOM.Core.Nodes.Append_Child (My_Root_Node, My_Graph_Node);
-
       My_Text_Node := DOM.Core.Documents.Create_Element (My_Document, "text");
       DOM.Core.Elements.Set_Attribute (My_Text_Node, "class", "tooltip");
       DOM.Core.Elements.Set_Attribute (My_Text_Node, "id", "tooltip_kwh");
@@ -333,16 +319,6 @@ package body Construct_SVG is
       My_Text_Node := DOM.Core.Nodes.Append_Child (My_Root_Node, My_Text_Node);
       My_Text := DOM.Core.Documents.Create_Text_Node (My_Document, "wibble");
       My_Text := DOM.Core.Nodes.Append_Child (My_Text_Node, My_Text);
-
---      My_Text_Node := DOM.Core.Documents.Create_Element (My_Document, "text");
---      DOM.Core.Elements.Set_Attribute (My_Text_Node, "class", "tooltip");
---      DOM.Core.Elements.Set_Attribute (My_Text_Node, "id", "tooltip_test");
---      DOM.Core.Elements.Set_Attribute (My_Text_Node, "visibility", "hidden");
---      DOM.Core.Elements.Set_Attribute (My_Text_Node, "x", "0");
---      DOM.Core.Elements.Set_Attribute (My_Text_Node, "y", "0");
---      My_Text_Node := DOM.Core.Nodes.Append_Child (My_Root_Node, My_Text_Node);
---      My_Text := DOM.Core.Documents.Create_Text_Node (My_Document, "wibble");
---      My_Text := DOM.Core.Nodes.Append_Child (My_Text_Node, My_Text);
    end Add_Tooltip_Area;
 
    procedure Add_Usage (power_details : pow_array; uo : use_offset) is
@@ -372,9 +348,6 @@ package body Construct_SVG is
             DOM.Core.Elements.Set_Attribute (Rect_Node, "onmousemove", To_String (all_str));
             DOM.Core.Elements.Set_Attribute (Rect_Node, "onmouseout", "HideTooltip(evt)");
             Rect_Node  := DOM.Core.Nodes.Append_Child (My_Root_Node, Rect_Node);
-            Ada.Text_IO.Put_Line ("not 0");
-         else
-            Ada.Text_IO.Put_Line ("is 0");
          end if;
       end loop;
       null;
@@ -590,7 +563,6 @@ package body Construct_SVG is
          ldivs := gd (i);
          exit div_loop when gd (i).Max > CF_power (Max);
       end loop div_loop;
-      Put_Line ("... " & CF_power (Max)'Img & ", " & ldivs.Major'Img & ", " & ldivs.NoDivs'Img & ", " & ldivs.YDist'Img & ", " & ldivs.Max'Img);
    end Get_Graph_Extents;
 
    function Get_Min_Max (power_details : pow_array) return Min_Max is
@@ -792,12 +764,12 @@ package body Construct_SVG is
                                                 Result_PWD'Address);
 
          if Result_PWD = System.Null_Address or else CHOwn_Res /= 0 then
-            Ada.Text_IO.Put_Line ("Get_PW_Name_R failed, Null returned or CHOwn_Res not zero: " &
-                                    Web_PWD.pw_uid'Image                                        &
-                                    ", "                                                        &
-                                    Web_PWD.pw_gid'Image                                        &
-                                    ", "                                                        &
-                                    CHOwn_Res'Image);
+            raise Program_Error with "Get_PW_Name_R failed, Null returned or CHOwn_Res not zero: " &
+                                       Web_PWD.pw_uid'Image                                        &
+                                       ", "                                                        &
+                                       Web_PWD.pw_gid'Image                                        &
+                                       ", "                                                        &
+                                       CHOwn_Res'Image;
             return;
          end if;
 
@@ -808,14 +780,13 @@ package body Construct_SVG is
          Interfaces.C.Strings.Free (C_Ptr);
 
          if CHOwn_Res /= 0 then
-            Ada.Text_IO.Put_Line ("chown failed: " &
-                                    CHOwn_Res'Image);
+            raise Program_Error with "chown failed: " & CHOwn_Res'Image;
             return;
          end if;
       end if;
 
       if res /= 0 then
-         Print_Line.Print_Single_Line ("Chown failed on " & To_String (dirstr & fname) & ", with result " & res'Img);
+         raise Program_Error with "Chown failed on " & To_String (dirstr & fname) & ", with result " & res'Img;
       end if;
    end Write_SVG;
 
@@ -920,12 +891,12 @@ package body Construct_SVG is
                                                 Result_PWD'Address);
 
          if Result_PWD = System.Null_Address or else CHOwn_Res /= 0 then
-            Ada.Text_IO.Put_Line ("Get_PW_Name_R failed, Null returned or CHOwn_Res not zero: " &
-                                    Web_PWD.pw_uid'Image                                        &
-                                    ", "                                                        &
-                                    Web_PWD.pw_gid'Image                                        &
-                                    ", "                                                        &
-                                    CHOwn_Res'Image);
+            raise Program_Error with "Get_PW_Name_R failed, Null returned or CHOwn_Res not zero: " &
+                                       Web_PWD.pw_uid'Image                                        &
+                                       ", "                                                        &
+                                       Web_PWD.pw_gid'Image                                        &
+                                       ", "                                                        &
+                                       CHOwn_Res'Image;
             return;
          end if;
 
@@ -936,14 +907,13 @@ package body Construct_SVG is
          Interfaces.C.Strings.Free (C_Ptr);
 
          if CHOwn_Res /= 0 then
-            Ada.Text_IO.Put_Line ("chown failed: " &
-                                    CHOwn_Res'Image);
+            raise Program_Error with "chown failed: " & CHOwn_Res'Image;
             return;
          end if;
       end if;
 
       if res /= 0 then
-         Print_Line.Print_Single_Line ("Chown failed on " & To_String (dirstr & fname) & ", with result " & res'Img);
+         raise Program_Error with "Chown failed on " & To_String (dirstr & fname) & ", with result " & res'Img;
       end if;
    end Write_SVG;
 

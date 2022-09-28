@@ -28,12 +28,14 @@ package db_routines is
    subtype Stmt_Type_access is AdaBase.Statement.Base.MySQL.MySQL_statement_access;
    DR : AdaBase.Driver.Base.MySQL.MySQL_Driver;
 
-   procedure db_connect;
-   procedure db_disconnect;
-   function  get_bill_date (t : tmrec) return bill_date_details;
-   procedure bill_date (t :  in out tmrec);
-   function  get_earliest_start return long;
-   function  get_power_usage (p : periodrec; pt : graph_period_type; ctime : tmrec) return powerrec;
+   procedure DB_Connect;
+   procedure DB_Disconnect;
+   function  Get_Bill_Date (t : tmrec) return bill_date_details;
+   procedure Bill_Date (t :  in out tmrec);
+   function  Get_Earliest_Start return long;
+   function  Get_Last_TS return Interfaces.C.long;
+   function  Get_Last_TS_Run return Interfaces.C.long;
+   function  Get_Power_Usage (p : periodrec; pt : graph_period_type; ctime : tmrec) return powerrec;
    procedure Set_Account_Details (Host, DB, User, Pass : Ada.Strings.Unbounded.Unbounded_String; Port : Integer := 3306);
 
 private

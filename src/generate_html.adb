@@ -21,7 +21,6 @@ with Interfaces;              use Interfaces;
 with Interfaces.C;
 with Interfaces.C.Strings;    use Interfaces.C.Strings;
 with Unix_Utils;
-with Print_Line;
 with Xstrings; use Xstrings;
 with System; use System;
 
@@ -59,7 +58,8 @@ package body Generate_HTML is
       Ada.Text_IO.Put_Line (index_html_file, "  <html xmlns=""http://www.w3.org/1999/xhtml"" lang=""en"" dir=""ltr"" />");
       Ada.Text_IO.Put_Line (index_html_file, "    <head >");
       Ada.Text_IO.Put_Line (index_html_file, "      <meta http-equiv=""Content-Type"" content=""text/html; charset=iso-8859-1""/>");
-      Ada.Text_IO.Put_Line (index_html_file, "      <title> SVG test </title>");
+      Ada.Text_IO.Put_Line (index_html_file, "      <LINK rel=""icon"" type=""image/svg+xml"" href=""/favicon.svg"">");
+      Ada.Text_IO.Put_Line (index_html_file, "      <title> Power map </title>");
       Ada.Text_IO.Put_Line (index_html_file, "    </head>");
       Ada.Text_IO.Put_Line (index_html_file, "    <body>");
 
@@ -164,12 +164,12 @@ package body Generate_HTML is
                                                 Result_PWD'Address);
 
          if Result_PWD = System.Null_Address or else CHOwn_Res /= 0 then
-            Ada.Text_IO.Put_Line ("Get_PW_Name_R failed, Null returned or CHOwn_Res not zero: " &
-                                    Web_PWD.pw_uid'Image                                        &
-                                    ", "                                                        &
-                                    Web_PWD.pw_gid'Image                                        &
-                                    ", "                                                        &
-                                    CHOwn_Res'Image);
+            raise Program_Error with "Get_PW_Name_R failed, Null returned or CHOwn_Res not zero: " &
+                                      Web_PWD.pw_uid'Image                                        &
+                                      ", "                                                        &
+                                      Web_PWD.pw_gid'Image                                        &
+                                      ", "                                                        &
+                                      CHOwn_Res'Image;
             return;
          end if;
 
@@ -180,14 +180,13 @@ package body Generate_HTML is
          Interfaces.C.Strings.Free (C_Ptr);
 
          if CHOwn_Res /= 0 then
-            Ada.Text_IO.Put_Line ("chown failed: " &
-                                    CHOwn_Res'Image);
+            raise Program_Error with "chown failed: " & CHOwn_Res'Image;
             return;
          end if;
       end if;
 
       if res /= 0 then
-         Print_Line.Print_Single_Line ("Chown failed on " & To_String (indexstr & im_html) & ", with result " & res'Img);
+         raise Program_Error with "Chown failed on " & To_String (indexstr & im_html) & ", with result " & res'Img;
       end if;
    end update;
 end Generate_HTML;

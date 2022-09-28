@@ -17,7 +17,6 @@ with Ada.Calendar;                 use Ada.Calendar;
 with Ada.Calendar.Conversions;
 with Ada.Calendar.Arithmetic;      use Ada.Calendar.Arithmetic;
 with Time_Routines;                use Time_Routines;
-with Print_Line;                   use Print_Line;
 with AdaBase.Results.Sets;
 
 package body db_routines is
@@ -27,7 +26,7 @@ package body db_routines is
    costs_row     : AdaBase.Results.Sets.Datarow;
    costs_numrows : AdaBase.Affected_Rows;
 
-   procedure bill_date (t : in out Record_Types.tmrec) is
+   procedure Bill_Date (t : in out Record_Types.tmrec) is
       d : bill_date_details;
    begin
       d := get_bill_date (t);
@@ -38,23 +37,23 @@ package body db_routines is
 
       t.tm_mday  := d.d;
       populate_tm (t);
-   end bill_date;
+   end Bill_Date;
 
-   procedure db_connect is
+   procedure DB_Connect is
    begin
       DR.basic_connect (database => Ada.Strings.Unbounded.To_String (Database),
                         username => Ada.Strings.Unbounded.To_String (DB_User),
                         password => Ada.Strings.Unbounded.To_String (DB_Pass),
                         hostname => Ada.Strings.Unbounded.To_String (DB_Host),
                         port     => DB_Port);
-   end db_connect;
+   end DB_Connect;
 
-   procedure db_disconnect is
+   procedure DB_Disconnect is
    begin
       DR.disconnect;
-   end db_disconnect;
+   end DB_Disconnect;
 
-   function get_bill_date (t : tmrec) return bill_date_details is
+   function Get_Bill_Date (t : tmrec) return bill_date_details is
       sql_billdate : constant String := "SELECT ts_start,day_of_month FROM bill_date where ts_start<=" & Ada.Calendar.Conversions.To_Unix_Time (t.tm)'Img &
         " AND ts_end>="   & Ada.Calendar.Conversions.To_Unix_Time (t.tm)'Img;
       dbt : bill_date_details;
@@ -69,27 +68,68 @@ package body db_routines is
       dbt.s := Ada.Calendar.Conversions.To_Ada_Time (Interfaces.C.long (row.column (1).as_byte8));
       dbt.d := Ada.Calendar.Day_Number                                 (row.column (2).as_byte4);
       return dbt;
-   end get_bill_date;
+   end Get_Bill_Date;
 
-   function get_earliest_start return long is
+   function Get_Earliest_Start return long is
       sql_minsecs : constant String := "SELECT MIN(seconds) FROM count";
    begin
       declare
          stmt : Stmt_Type_Local := DR.query (sql_minsecs);
       begin
-         Print_Single_Line ("Query successful: " & stmt.successful'Img);
          numrows := stmt.rows_returned;
-         Print_Single_Line ("Rows: " & numrows'Img & " rows");
-         Print_Single_Line ("   TABLE: " & stmt.column_table (1));
-         Print_Single_Line ("    NAME: " & stmt.column_name (1));
-         Print_Single_Line ("    TYPE: " & stmt.column_native_type (1)'Img);
          row := stmt.fetch_next;
       end;
 
       return (long (row.column (1).as_byte8));
-   end get_earliest_start;
+   end Get_Earliest_Start;
 
-   function get_power_usage (p : periodrec; pt : graph_period_type; ctime : tmrec) return powerrec is
+   function Get_Last_TS return Interfaces.C.long is
+      SQL_Max_Secs          : constant String := "SELECT MAX(seconds) FROM count";
+   begin
+      declare
+         stmt : Stmt_Type_Local := DR.query (SQL_Max_Secs);
+      begin
+         numrows := stmt.rows_returned;
+         row := stmt.fetch_next;
+      end;
+
+      return (Interfaces.C.long (row.column (1).as_byte8));
+   end Get_Last_TS;
+
+   function Get_Last_TS_Run return Interfaces.C.long is
+      SQL_Max_Secs          : constant String := "SELECT MAX(seconds) FROM count";
+      SQL_Last_Run          : constant String := "SELECT value FROM config WHERE parameter='latest_ts'";
+      SQL_Insert_Secs_Start : constant String := "UPDATE config SET value=";
+      SQL_Insert_Secs_End   : constant String := " where parameter = 'latest_ts'";
+      Last_Run              : Interfaces.C.long;
+      Max_Run               : Interfaces.C.long;
+   begin
+      declare
+         stmt : Stmt_Type_Local := DR.query (SQL_Max_Secs);
+      begin
+         numrows := stmt.rows_returned;
+         row     := stmt.fetch_next;
+         Max_Run := Interfaces.C.long (row.column (1).as_byte8);
+      end;
+
+      declare
+         stmt : Stmt_Type_Local := DR.query (SQL_Last_Run);
+      begin
+         numrows  := stmt.rows_returned;
+         row      := stmt.fetch_next;
+         Last_Run := Interfaces.C.long (row.column (1).as_byte8);
+      end;
+
+      if DR.execute (sql => SQL_Insert_Secs_Start & Max_Run'Image & SQL_Insert_Secs_End) /= 1 then
+         DR.rollback;
+      end if;
+
+      DR.commit;
+
+      return (Last_Run);
+   end Get_Last_TS_Run;
+
+   function Get_Power_Usage (p : periodrec; pt : graph_period_type; ctime : tmrec) return powerrec is
       kwhr                 : Long_Integer := 0;
       usage                : powerrec;
       localperiodrec       : periodrec := p;
@@ -162,7 +202,7 @@ package body db_routines is
          usage.period_details := p;
       end;
       return usage;
-   end get_power_usage;
+   end Get_Power_Usage;
 
    procedure Set_Account_Details (Host, DB, User, Pass : Ada.Strings.Unbounded.Unbounded_String; Port : Integer := 3306) is
    begin

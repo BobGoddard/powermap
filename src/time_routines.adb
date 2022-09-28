@@ -17,6 +17,7 @@ with Ada.Text_IO;              use Ada.Text_IO;
 with GNAT.Calendar;            use GNAT.Calendar;
 with GNAT.Calendar.Time_IO;
 with db_routines;
+with Logger;
 
 package body Time_Routines is
 
@@ -159,7 +160,6 @@ package body Time_Routines is
             t4 := add (t4, mn => 60);
          end if;
       end loop count_hours;
-      Put_Line ("Hours: " & h'Img);
       return h;
    end Get_Hours_In_Day;
 

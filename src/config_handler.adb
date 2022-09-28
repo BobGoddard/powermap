@@ -13,7 +13,6 @@
 --  You should have received a copy of the GNU General Public License
 --  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-with Ada.Text_IO;
 with Input_Sources;
 with Input_Sources.File;
 with Sax.Readers;
@@ -51,26 +50,16 @@ package body Config_Handler is
       for Index in 1 .. DOM.Core.Nodes.Length (List) loop
          N := DOM.Core.Nodes.Item (List, Index - 1);
          A := DOM.Core.Nodes.Get_Named_Item (DOM.Core.Nodes.Attributes (N), "name");
-         Ada.Text_IO.Put ("Value of '");
-         Ada.Text_IO.Put (DOM.Core.Attrs.Value (A));
-         Ada.Text_IO.Put ("' is ");
-         Ada.Text_IO.Put (DOM.Core.Nodes.Node_Value (DOM.Core.Nodes.First_Child (N)));
-         Ada.Text_IO.New_Line;
 
          if DOM.Core.Attrs.Value (A) = "host" then
-            Ada.Text_IO.Put_Line ("Setting host");
             Host := Ada.Strings.Unbounded.To_Unbounded_String (DOM.Core.Nodes.Node_Value (DOM.Core.Nodes.First_Child (N)));
          elsif DOM.Core.Attrs.Value (A) = "db" then
-            Ada.Text_IO.Put_Line ("Setting database");
             DB := Ada.Strings.Unbounded.To_Unbounded_String (DOM.Core.Nodes.Node_Value (DOM.Core.Nodes.First_Child (N)));
          elsif DOM.Core.Attrs.Value (A) = "user" then
-            Ada.Text_IO.Put_Line ("Setting user");
             User := Ada.Strings.Unbounded.To_Unbounded_String (DOM.Core.Nodes.Node_Value (DOM.Core.Nodes.First_Child (N)));
          elsif DOM.Core.Attrs.Value (A) = "pass" then
-            Ada.Text_IO.Put_Line ("Setting pass");
             Pass := Ada.Strings.Unbounded.To_Unbounded_String (DOM.Core.Nodes.Node_Value (DOM.Core.Nodes.First_Child (N)));
          elsif DOM.Core.Attrs.Value (A) = "port" then
-            Ada.Text_IO.Put_Line ("Setting port");
             Port := Integer'Value (DOM.Core.Nodes.Node_Value (DOM.Core.Nodes.First_Child (N)));
          end if;
       end loop;
